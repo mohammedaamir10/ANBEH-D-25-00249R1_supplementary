@@ -725,7 +725,9 @@ ggsave("supplementary_fig_1.jpg", plot = my_plot, width = 12, height = 8, units 
 
 df <-read.csv('Bodysize+movement.csv')
 df<-na.omit(df)
+#sample size
 nrow(df)
+#GLM for body size and movement towards speaker
 model <- glm(Moved.Towards~Body.size.mm., family = binomial, data=df)
 summary(model)
 
