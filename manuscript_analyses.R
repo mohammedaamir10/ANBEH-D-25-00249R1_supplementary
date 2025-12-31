@@ -10,6 +10,10 @@ library(MuMIn)
 library(moments)
 library(patchwork)
 library(rstudioapi)
+library (survival) 
+library(ggfortify)
+library(ggsurvfit)
+library (survminer)
 
 #set to current work directory where the data and the code is stored
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
@@ -108,12 +112,12 @@ trials_t2 <- nrow(dplyr::filter(df_2,TREATMENT..min.> 0))
 prop.test(c(callers_t1,callers_t2), c(trials_t1,trials_t2), p = NULL, alternative = "two.sided",correct = TRUE)
 
 #caller proportion without playback
-fig_df<-data.frame(treatment = c('playback at start','no playback at start'), proportion = c(callers_t1/trials_t1, callers_t2/trials_t2) , label = c(paste0(callers_t1, '/', trials_t1), paste0(callers_t2, '/', trials_t2)))
+fig_df<-data.frame(treatment = c('playback at start','no playback at start'), proportion = c(callers_t1/trials_t1, callers_t2/trials_t2) )
 my_plot <- fig_df%>%
   ggplot(aes(x=treatment,y=proportion,fill = treatment ))+
   geom_bar(stat = "identity") +
   geom_text(
-    aes(label = label),
+    aes(label = sprintf("%.2f", proportion)),
     vjust = 1.3,          # moves text inside bar
     fontface = "bold",
     color = "black",
@@ -183,7 +187,7 @@ prop.test(c(movment_towards_speaker_without_playback,movment_towards_speaker_wit
 
 
 #dataframe for plots of movement
-df_plot<-data.frame(treatment = c("playback at start","no playback at start"), mover_proportion = c(movers_with_playback/total_trials_with_playback,movers_without_playback/total_trials_without_playback), label = c(paste0(movers_with_playback, '/', total_trials_with_playback), paste0( movers_without_playback, '/', total_trials_without_playback)))
+df_plot<-data.frame(treatment = c("playback at start","no playback at start"), mover_proportion = c(movers_with_playback/total_trials_with_playback,movers_without_playback/total_trials_without_playback))
 
 
 #Fig_4a. plot for proportion of movers
@@ -191,7 +195,7 @@ my_plot <- df_plot%>%
   ggplot(aes(x=treatment,y=mover_proportion,fill = treatment ))+
   geom_bar(stat = "identity") +
   geom_text(
-    aes(label = label),
+    aes(label = sprintf("%.2f", mover_proportion)),
     vjust = 1.3,          # moves text inside bar
     fontface = "bold",
     color = "black",
@@ -222,12 +226,12 @@ my_plot <- my_plot +
 ggsave("fig_4_a.jpg", plot = my_plot, width = 12, height = 8, units = "in", dpi = 300)
 
 #Fig_4b.plot for proportion of movers towards speaker
-df_plot<-data.frame(treatment = c("playback at start","no playback at start"), mover_proportion_towards_speaker = c(movment_towards_speaker_with_playback/total_trials_with_playback,movment_towards_speaker_without_playback/total_trials_without_playback), label = c(paste0(movment_towards_speaker_with_playback, '/', total_trials_with_playback), paste0( movment_towards_speaker_without_playback, '/', total_trials_without_playback)))
+df_plot<-data.frame(treatment = c("playback at start","no playback at start"), mover_proportion_towards_speaker = c(movment_towards_speaker_with_playback/total_trials_with_playback,movment_towards_speaker_without_playback/total_trials_without_playback))
 my_plot <- df_plot%>%
   ggplot(aes(x=treatment,y=mover_proportion_towards_speaker,fill = treatment ))+
   geom_bar(stat = "identity") +
   geom_text(
-    aes(label = label),
+    aes(label = sprintf("%.2f", mover_proportion_towards_speaker)),
     vjust = 1.3,          # moves text inside bar
     fontface = "bold",
     color = "black",
@@ -644,6 +648,7 @@ my_plot <- my_plot +
   )
 #Saving Figure 6c
 p3 <-my_plot
+
 #ggsave("fig_6_c.jpg", plot = my_plot, width = 12, height = 8, units = "in", dpi = 300)
 final_plot <- p1 / p2 / p3 + plot_layout(heights = c(1,1,1))
 
@@ -720,8 +725,7 @@ my_plot <- my_plot +
 ggsave("supplementary_fig_1.jpg", plot = my_plot, width = 12, height = 8, units = "in", dpi = 300)
 ß
 ############################################################################################ 
-#Supplementary Figure 3 with analysis
-#
+#Supplementary Figure 4 with analysis
 
 df <-read.csv('Bodysize+movement.csv')
 df<-na.omit(df)
@@ -743,34 +747,71 @@ my_plot <- df %>%
   theme_classic(25) +
   theme(axis.text = element_text(face = 'bold'), axis.title = element_text(face = 'bold'))
 
-ggsave("supplementary_fig_3.jpg", plot = my_plot, width = 12, height = 8, units = "in", dpi = 300)
+ggsave("supplementary_fig_4.jpg", plot = my_plot, width = 12, height = 8, units = "in", dpi = 300)
 ############################################################################################
-#TODO:Figure out the relevant dataset and then plot
-#Supplementary Figure 4
 
-#test for movement males after male release
-df1 <- read.csv('Movement_proportion_null.csv')
+#Supplementary Figure 5
+#Experiment T2 (no playback at start).
+#dataset for trials with no playback at start
+df1 <- read.csv('Exp2_null_movement.csv')
+na.omit(df1)
+
+#number of movers in Experiment T2 within 10 mins of release for all trails (i.e., 0,2,5,10 mins of playback)
 movers_without_playback <- sum(df1$Movement)
-#total number of trials in Experiment T2 for 2,5,10 mins of playback
-total_trials_without_playback <- length(df1$movement)
-my_plot <- df1%>%
-  ggplot(aes(x=Treatement,y=Proportion.of.movers,fill = Treatement ))+
+#total number of trials in Experiment T2 
+total_trials_without_playback <- length(df1$Movement)
+#number of movers who moved towards the speaker in Experiment T2 for 2,5,10 mins of playback
+
+
+
+#Experiment T1 (with playback at start).
+df2 <- read.csv('O.henryi_SPL_MovementtALL_DATA_T1.csv')
+#number of movers in Experiment T1 within 10 mins
+df2$movement <- ifelse(df2$MOVEMENT_SIDE..0.L.R.!=0,1,0)
+movers_with_playback <- sum(df2$movement)
+#number of movers in Experiment T1 within 10 mins of 
+total_trials_with_playback <- length(df2$movement)
+
+
+#test for difference in proportion of movers between Experiment T1 and T2 within 10 mins of release
+prop.test(c(movers_without_playback,movers_with_playback), c(total_trials_without_playback ,total_trials_with_playback), p = NULL, alternative = "two.sided",
+          correct = TRUE)
+
+
+
+#dataframe for plots of movement
+df_plot<-data.frame(treatment = c("playback at start","no playback at start"), mover_proportion = c(movers_with_playback/total_trials_with_playback,movers_without_playback/total_trials_without_playback))
+
+
+
+my_plot <- df_plot%>%
+  ggplot(aes(x=treatment,y=mover_proportion,fill = treatment ))+
   geom_bar(stat = "identity") +
+  geom_text(
+    aes(label = sprintf("%.2f", mover_proportion)),
+    vjust = 1.3,          # moves text inside bar
+    fontface = "bold",
+    color = "black",
+    size = 10
+    ) +
+  scale_x_discrete(labels = c(
+    playback_at_start     = "Playback at start",
+    no_playback_at_start  = "No playback at start"
+  )) +
   scale_fill_manual(breaks = waiver(),values = c("grey75","grey50")) +
+    scale_y_continuous(
+    labels = function(x) ifelse(x == 0, "0", x)
+  ) +
   guides (fill=FALSE) +
   xlab('Treatment') +
   ylab('proportion of movers') +
   theme_classic(25)+
   theme(axis.text=element_text(face='bold'),axis.title = element_text(face='bold')) 
 
-ggsave("proportion of movers null.jpg", plot = my_plot, width = 12, height = 8, units = "in", dpi = 300)
-
-#Statistical test for the above plot
-prop.test(c(33,31), c(120,60), p = NULL, alternative = "two.sided",
-          correct = TRUE)
+ggsave("supplementary_fig_5.jpg", plot = my_plot, width = 12, height = 8, units = "in", dpi = 300)
 
 ############################################################################################
-#Supplementary Figure 5
+#Supplementary Figure 6
 
 df <- read.csv('Latency + Binary call data.csv')
 #Experiment T1 (playback at start).
@@ -788,12 +829,12 @@ trials_t2 <-nrow(dplyr::filter(df,treatment == 'no_playback_at_start'))
 prop.test(c(callers_t1,callers_t2), c(trials_t1,trials_t2), p = NULL, alternative = "two.sided",correct = TRUE)
 
 #caller proportion without playback
-fig_df<-data.frame(treatment = c('playback at start','no playback at start'), proportion = c(callers_t1/trials_t1, callers_t2/trials_t2) , label = c(paste0(callers_t1, '/', trials_t1), paste0(callers_t2, '/', trials_t2)))
+fig_df<-data.frame(treatment = c('playback at start','no playback at start'), proportion = c(callers_t1/trials_t1, callers_t2/trials_t2) )
 my_plot <- fig_df%>%
   ggplot(aes(x=treatment,y=proportion,fill = treatment ))+
   geom_bar(stat = "identity") +
   geom_text(
-    aes(label = label),
+    aes(label = sprintf("%.2f", proportion)),
     vjust = 1.3,          # moves text inside bar
     fontface = "bold",
     color = "black",
@@ -813,65 +854,40 @@ my_plot <- fig_df%>%
   theme_classic(25)+
   theme(axis.text=element_text(face='bold'),axis.title = element_text(face='bold')) 
 
-ggsave("supplementary_fig_5.jpg", plot = my_plot, width = 12, height = 8, units = "in", dpi = 300)
+ggsave("supplementary_fig_6.jpg", plot = my_plot, width = 12, height = 8, units = "in", dpi = 300)
+
+############################################################################################
+$#Supplementary Figure 7
+#Survivorship for males using the kaplan_meier method
+dat <- read.csv('Data_Surv_Analysis-1.csv',na.strings = c("NA",""))
+dat <- dat[!is.na(dat$Exp.ID), ]
+dat$Latency[dat$Exp.ID== 1 & dat$Latency=='NaN'] <- 30
+dat$Latency[dat$Exp.ID== 2 & dat$Latency=='NaN'] <- 20
+dat$Exp.ID  <- ifelse (dat$Exp.ID ==1, "Experiment 1", "Experiment 2")
+dat$Exp.ID <- as.factor(dat$Exp.ID)
 
 
 
+my_plot <- survfit2(Surv(Latency, call_binary) ~ Exp.ID , data = dat) %>% 
+  ggsurvfit(linetype_aes = TRUE,size=1) +
+  labs(
+    x = "Latency (min)",
+    y = "Silent probability"
+  ) +
+  scale_colour_manual(values =  c("black","black","black")) +
+  scale_x_continuous( breaks = c(0,5,10,15,20,25,30,35), limits=c(0,35)) +
+  scale_y_continuous(
+    labels = function(x) ifelse(x %% 1 == 0, as.character(x), x)
+  ) +
+  add_confidence_interval() +
+  add_legend_title('') +
+  theme_classic(25) +
+  theme(axis.text=element_text(face='bold'),axis.title = element_text(face='bold'))  
+  ggsave("supplementary_fig_7.jpg", plot = my_plot, width = 12, height = 8, units = "in", dpi = 300)
+
+#testing for statistical differences between the survival curves
+survdiff(Surv(Latency, call_binary) ~ Exp.ID,
+         data = dat)
 
 
-# ###############################tes for difference in chirp rate between time points
-# #supplementary analyses for change in chirp rate with time
-
-# dat <- read.csv('O.henryi_SPL_MovementtALL_DATA_T2.csv')
-
-# dat<-filter(dat,CHIRP_RATE_PRE_EXPO_3min!='NaN',CHIRP_RATE_PRE_EXPO_5min!='NaN',CHIRP_RATE_PRE_EXPO_8min!='NaN')
-
-# chirp_rate <- c(dat$CHIRP_RATE_PRE_EXPO_3min,dat$CHIRP_RATE_PRE_EXPO_5min,dat$CHIRP_RATE_PRE_EXPO_8min)
-# df <- data.frame(treatment = rep(dat$TREATMENT..min.,3),id = rep(dat$TRIAL_NO.,3), time_of_measurement = c(rep(3,nrow(dat)),rep(5,nrow(dat)),rep(8,nrow(dat))),chirp_rate=chirp_rate)
-
-# df$time_of_measurement<-as.factor(df$time_of_measurement)
-# my_plot <- df%>%
-#   ggplot(aes(x=time_of_measurement,y=chirp_rate, fill=factor(time_of_measurement)))+
-#   geom_boxplot() +
-#   scale_fill_manual(breaks = waiver(),values = c("white","grey70", 'grey90')) +
-#   geom_point(position=position_jitterdodge(),alpha=1,col='black') +
-#   #scale_y_continuous(breaks=c(0,0.1,0.5,1,1.5,2)) +
-#   # scale_y_break(c(1.05, 1.9)) +
-#   labs(fill='') +
-#   xlab('Time of measurement(min)') +
-#   ylab('Chirp rate(chirps per second)') +
-#   theme_classic(base_size = 25)
-
-# ggsave("chirp_rate_supplementary.jpg", plot = my_plot, width = 12, height = 8, units = "in", dpi = 300)
-
-
-# dat_n <- filter(df,time_of_measurement!=3)
-
-# #### wilcox.test(chirp_rate~time_of_measurement,data=dat_n,paired=TRUE)
-
-# res.anova <- anova_test(
-#   data = df, dv = chirp_rate, wid = id,
-#   within = c( time_of_measurement))
-# get_anova_table(res.anova)
-
-# pwc <- df %>%
-#   pairwise_t_test(
-#     chirp_rate ~ time_of_measurement, paired = TRUE,
-#     p.adjust.method = "bonferroni"
-#   )
-# pwc
-
-
-
-# dat_n <- filter(df,treatment==0)
-# wilcox.test(chirp_rate~time_of_measurement,data=dat_n,paired=TRUE)
-
-# dat_n <- filter(df,treatment==2)
-# wilcox.test(chirp_rate~time_of_measurement,data=dat_n,paired=TRUE)
-
-# dat_n <- filter(df,treatment==5)
-# wilcox.test(chirp_rate~time_of_measurement,data=dat_n,paired=TRUE)
-
-# dat_n <- filter(df,treatment==10)
-# wilcox.test(chirp_rate~time_of_measurement,data=dat_n,paired=TRUE)
 
