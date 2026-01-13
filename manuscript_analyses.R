@@ -29,8 +29,8 @@ setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 #latency of callers and caller proportion during playback
 df <- read.csv('Latency + Binary call data.csv')
 
-#Figure 3a with analyses
-#Figure 3a.Analysis of calling latency
+#Figure 4a with analyses
+#Figure 4a.Analysis of calling latency
 df1 <- dplyr::filter(df, call_no_call==1)  #filtering out animals that did not call.
 #Wilcox test for difference in latency
 wilcox.test(latency ~treatment, data=df1)
@@ -91,10 +91,9 @@ my_plot <- my_plot +
     size = 10
   )
 
-ggsave("fig_3_a.jpg", plot = my_plot, width = 12, height = 8, units = "in", dpi = 300)
+########### Changed 3a -> 4a ###############
 
-
-
+ggsave("fig_4_a.tiff", plot = my_plot, width = 12, height = 8, units = "in", dpi = 300)
 
 #Figure 3b.
 #Experiment T1 (playback at start).
@@ -145,10 +144,66 @@ my_plot <- my_plot +
     fontface = "bold",
     size = 10
   )
-ggsave("fig_3_b.jpg", plot = my_plot, width = 12, height = 8, units = "in", dpi = 300)
+ggsave("fig_4_b.tiff", plot = my_plot, width = 12, height = 8, units = "in", dpi = 300)
 
+#Boxing the plots and Combining them
+shared_theme <- theme_classic(25) + 
+  theme(
+    panel.border = element_rect(colour = "black", fill = NA, linewidth = 1.5),
+    axis.text = element_text(face = 'bold'),
+    axis.title = element_text(face = 'bold'),
+    plot.margin = margin(15, 15, 15, 15),
+    
+    # 1. Move ticks inside (negative length pulls them into the plot)
+    axis.ticks.length = unit(-0.25, "cm"), 
+    
+    # 2. Add margin to text so labels don't hit the inward ticks
+    axis.text.x = element_text(margin = margin(t = 15), face = 'bold'),
+    axis.text.y = element_text(margin = margin(r = 15), face = 'bold'),
+    
+    # 3. Ensure tick lines match your border thickness
+    axis.ticks = element_line(colour = "black", linewidth = 1.5)
+  )
+# --- FIGURE 4A ---
+p1 <- df1 %>%
+  ggplot(aes(x=treatment, y=latency, fill=treatment)) +
+  geom_boxplot(size=1, coef = Inf, outlier.shape = NA) +
+  stat_boxplot(geom = "errorbar", coef = Inf, linewidth = 1, width = 0.5) +
+  scale_fill_manual(values = c("white", "grey90")) +
+  geom_point(position=position_jitterdodge(), alpha=1, col='black', size=2.5) +
+  labs(x = 'Treatment', y = 'Latency (min)') +
+  guides(fill = "none") +
+  shared_theme + # Apply shared theme here
+  geom_text(data = sample_sizes, aes(x = treatment, y = y, label = label),
+            inherit.aes = FALSE, size = 7, parse = TRUE) +
+  scale_x_discrete(labels = c("playback at start" = "Playback at start", 
+                              "no playback at start" = "No playback at start")) +
+  annotate("text", x = -Inf, y = Inf, label = "a)", 
+           hjust = -0.3, vjust = 1.2, fontface = "bold", size = 10)
 
+# --- FIGURE 4B ---
+p2 <- fig_df %>%
+  ggplot(aes(x=treatment, y=proportion, fill=treatment)) +
+  geom_bar(stat = "identity") + 
+  geom_text(aes(label = sprintf("%.2f", proportion)),
+            vjust = 1.3, fontface = "bold", color = "black", size = 10) +
+  scale_x_discrete(labels = c("playback at start" = "Playback at start", 
+                              "no playback at start" = "No playback at start")) +
+  scale_fill_manual(values = c("grey75", "grey50")) +
+  scale_y_continuous(limits = c(0, 1)) +
+  labs(x = 'Treatment', y = 'Call propensity') +
+  guides(fill = "none") +
+  shared_theme + # Apply shared theme here
+  annotate("text", x = -Inf, y = Inf, label = "b)", 
+           hjust = -0.3, vjust = 1.2, fontface = "bold", size = 10)
 
+# --- COMBINE WITH ALIGNMENT ---
+# The '&' operator applies the alignment to all plots in the patchwork
+final_plot <- (p1 | p2) + 
+  plot_layout(widths = c(1, 1)) & 
+  theme(plot.margin = margin(20, 20, 20, 20))
+ 
+ggsave("fig_4_combined.tiff", plot = final_plot, width = 24, height = 8, units = "in", dpi = 300)
 
 #################################################################################################################
                                   #Movment analysis and plots
@@ -190,7 +245,7 @@ prop.test(c(movment_towards_speaker_without_playback,movment_towards_speaker_wit
 df_plot<-data.frame(treatment = c("playback at start","no playback at start"), mover_proportion = c(movers_with_playback/total_trials_with_playback,movers_without_playback/total_trials_without_playback))
 
 
-#Fig_4a. plot for proportion of movers
+#Fig_5a. plot for proportion of movers
 my_plot <- df_plot%>%
   ggplot(aes(x=treatment,y=mover_proportion,fill = treatment ))+
   geom_bar(stat = "identity") +
@@ -223,9 +278,10 @@ my_plot <- my_plot +
     fontface = "bold",
     size = 10
   )
-ggsave("fig_4_a.jpg", plot = my_plot, width = 12, height = 8, units = "in", dpi = 300)
 
-#Fig_4b.plot for proportion of movers towards speaker
+ggsave("fig_5_a.tiff", plot = my_plot, width = 12, height = 8, units = "in", dpi = 300)
+
+#Fig_5b.plot for proportion of movers towards speaker
 df_plot<-data.frame(treatment = c("playback at start","no playback at start"), mover_proportion_towards_speaker = c(movment_towards_speaker_with_playback/total_trials_with_playback,movment_towards_speaker_without_playback/total_trials_without_playback))
 my_plot <- df_plot%>%
   ggplot(aes(x=treatment,y=mover_proportion_towards_speaker,fill = treatment ))+
@@ -261,11 +317,83 @@ my_plot <- my_plot +
     size = 10
   )
 
-ggsave("fig_4_b.jpg", plot = my_plot, width = 12, height = 8, units = "in", dpi = 300)
+#######Combining the plot 5a and 5b with boxes #############
 
+shared_theme <- theme_classic(25) + 
+  theme(
+    # Create the full box
+    panel.border = element_rect(colour = "black", fill = NA, linewidth = 1.5),
+    axis.line = element_blank(), # Remove classic lines so they don't overlap border
+    
+    axis.text = element_text(face = 'bold'),
+    axis.title = element_text(face = 'bold'),
+    plot.margin = margin(1, 1, 1, 1),
+    
+    # Move ticks inside
+    axis.ticks.length = unit(-0.25, "cm"), 
+    
+    # Add margin to labels to avoid the inward ticks
+    axis.text.x = element_text(margin = margin(t = 15), face = 'bold'),
+    axis.text.y = element_text(margin = margin(r = 15), face = 'bold'),
+    
+    # Tick style
+    axis.ticks = element_line(colour = "black", linewidth = 1.5)
+  )
 
+# --- 2. Fig_5a: Total Proportion of Movers ---
+df_plot_a <- data.frame(
+  treatment = c("playback at start", "no playback at start"), 
+  mover_proportion = c(movers_with_playback/total_trials_with_playback, 
+                       movers_without_playback/total_trials_without_playback)
+)
 
+p1 <- df_plot_a %>%
+  ggplot(aes(x = treatment, y = mover_proportion, fill = treatment)) +
+  geom_bar(stat = "identity") +
+  geom_text(
+    aes(label = sprintf("%.2f", mover_proportion)),
+    vjust = 1.3, fontface = "bold", color = "black", size = 10
+  ) +
+  scale_x_discrete(labels = c("playback at start" = "Playback at start", 
+                              "no playback at start" = "No playback at start")) +
+  scale_fill_manual(values = c("grey75", "grey50")) +
+  scale_y_continuous(limits = c(0, 1), labels = function(x) ifelse(x == 0, "0", x)) +
+  guides(fill = "none") +
+  labs(x = 'Treatment', y = 'Proportion of movers') +
+  shared_theme +
+  annotate("text", x = -Inf, y = Inf, label = "a)", 
+           hjust = -0.3, vjust = 1.2, fontface = "bold", size = 10)
 
+# --- 3. Fig_5b: Proportion of Movers Towards Speaker ---
+df_plot_b <- data.frame(
+  treatment = c("playback at start", "no playback at start"), 
+  mover_proportion_towards_speaker = c(movment_towards_speaker_with_playback/total_trials_with_playback, 
+                                       movment_towards_speaker_without_playback/total_trials_without_playback)
+)
+
+p2 <- df_plot_b %>%
+  ggplot(aes(x = treatment, y = mover_proportion_towards_speaker, fill = treatment)) +
+  geom_bar(stat = "identity") +
+  geom_text(
+    aes(label = sprintf("%g", round(mover_proportion_towards_speaker, 2))),
+    vjust = 1.3, fontface = "bold", color = "black", size = 10
+  ) +
+  scale_x_discrete(labels = c("playback at start" = "Playback at start", 
+                              "no playback at start" = "No playback at start")) +
+  scale_fill_manual(values = c("grey75", "grey50")) +
+  scale_y_continuous(limits = c(0, 1), labels = function(x) ifelse(x == 0, "0", x)) +
+  guides(fill = "none") +
+  labs(x = 'Treatment', y = 'Proportion of movers towards speaker') +
+  shared_theme +
+  annotate("text", x = -Inf, y = Inf, label = "b)", 
+           hjust = -0.3, vjust = 1.2, fontface = "bold", size = 10)
+
+# --- 4. Combine and Save ---
+final_plot_5 <- (p1 | p2) + 
+  plot_layout(widths = c(1, 1)) & 
+  theme(plot.margin = margin(20, 20, 20, 20))
+
+ggsave("fig_5_combined.tiff", plot = final_plot_5, width = 24, height = 8, units = "in", dpi = 300)
 
 #################################################################################################################
                                   #SPL and chirp rate analysis with plots
@@ -277,12 +405,12 @@ df_spl <- df %>%
   select(MALE_SPL.dB., Treatment)
 wilcox.test(df$MALE_SPL.dB.~df$Treatment) #non-parametric
 
-#Figure 5a. 
+#Figure 6a. 
 
 sample_size_playback_at_start <- nrow(dplyr::filter (df_spl,Treatment=='playback at start'))
 sample_size_no_playback_at_start <- nrow(dplyr::filter (df_spl,Treatment=='no playback at start'))
 
-sample_sizes <- data.frame(
+sample_sizes_a <- data.frame(
   treatment = c("playback at start", "no playback at start"),
   y = 54,
   label = I(list(
@@ -311,7 +439,7 @@ my_plot <- df_spl%>%
   theme(axis.text=element_text(face='bold'),axis.title = element_text(face='bold')) 
 my_plot <- my_plot +
   geom_text(
-    data = sample_sizes,
+    data = sample_sizes_a,
     aes(x = treatment, y = y, label = label),
     inherit.aes = FALSE,
     size = 7,
@@ -327,10 +455,10 @@ my_plot <- my_plot +
     size = 10
   )
 
-ggsave("fig_5_a.jpg", plot = my_plot, width = 12, height = 8, units = "in", dpi = 300)
+ggsave("fig_6_a.jpg", plot = my_plot, width = 12, height = 8, units = "in", dpi = 300)
 
 
-#Analysis and plot for Figure 5b 
+#Analysis and plot for Figure 6b 
 #Non-parametric tests for chirp rate difference between Experiment T1 and T2
 df_chirp_rate <- df %>%
   filter(!is.na(CHIRP_RATE)) %>%
@@ -338,11 +466,11 @@ df_chirp_rate <- df %>%
 wilcox.test(df$CHIRP_RATE~df$Treatment) #non-parametric
 
 
-#Figure 5b.
+#Figure 6b.
 sample_size_playback_at_start <- nrow(dplyr::filter (df_chirp_rate,Treatment=='playback at start'))
 sample_size_no_playback_at_start <- nrow(dplyr::filter (df_chirp_rate,Treatment=='no playback at start'))
 
-sample_sizes <- data.frame(
+sample_sizes_b <- data.frame(
   treatment = c("playback at start", "no playback at start"),
   y = 1,
   label = I(list(
@@ -373,7 +501,7 @@ my_plot <- df_chirp_rate%>%
   theme(axis.text=element_text(face='bold'),axis.title = element_text(face='bold')) 
 my_plot <- my_plot +
   geom_text(
-    data = sample_sizes,
+    data = sample_sizes_b,
     aes(x = treatment, y = y, label = label),
     inherit.aes = FALSE,
     size = 7,
@@ -388,10 +516,71 @@ my_plot <- my_plot +
     fontface = "bold",
     size = 10
   )
-ggsave("fig_5_b.jpg", plot = my_plot, width = 12, height = 8, units = "in", dpi = 300)
+ggsave("fig_6_b.tiff", plot = my_plot, width = 12, height = 8, units = "in", dpi = 300)
 
+#Combining Figure6a and b and framing them
+shared_theme <- theme_classic(25) + 
+  theme(
+    # Create the full box
+    panel.border = element_rect(colour = "black", fill = NA, linewidth = 1.5),
+    axis.line = element_blank(), 
+    
+    axis.text = element_text(face = 'bold'),
+    axis.title = element_text(face = 'bold'),
+    plot.margin = margin(15, 15, 15, 15),
+    
+    # Move ticks inside
+    axis.ticks.length = unit(-0.25, "cm"), 
+    
+    # Add margin to text so labels don't hit the inward ticks
+    axis.text.x = element_text(margin = margin(t = 15), face = 'bold'),
+    axis.text.y = element_text(margin = margin(r = 15), face = 'bold'),
+    
+    # Ensure tick lines match your border thickness
+    axis.ticks = element_line(colour = "black", linewidth = 1.5)
+  )
 
+# --- 2. FIGURE 6A: SPL Plot ---
+p1 <- df_spl %>%
+  ggplot(aes(x = Treatment, y = MALE_SPL.dB., fill = Treatment)) +
+  geom_boxplot(size = 1, coef = Inf, outlier.shape = NA) +
+  stat_boxplot(geom = "errorbar", coef = Inf, linewidth = 1, width = 0.5) +
+  scale_x_discrete(labels = c("playback at start" = "Playback at start", 
+                              "no playback at start" = "No playback at start")) +
+  scale_fill_manual(values = c("white", "grey90")) +
+  geom_point(position = position_jitterdodge(), alpha = 1, col = 'black', size = 2.5) +
+  labs(x = 'Treatment', y = 'SPL (dB)') +
+  guides(fill = "none") +
+  shared_theme + 
+  geom_text(data = sample_sizes_a, aes(x = treatment, y = y, label = label),
+            inherit.aes = FALSE, size = 7, parse = TRUE) +
+  annotate("text", x = -Inf, y = Inf, label = "a)", 
+           hjust = -0.3, vjust = 1.2, fontface = "bold", size = 10)
 
+# --- 3. FIGURE 6B: Chirp Rate Plot ---
+p2 <- df_chirp_rate %>%
+  ggplot(aes(x = Treatment, y = CHIRP_RATE, fill = Treatment)) +
+  geom_boxplot(size = 1, coef = Inf, outlier.shape = NA) +
+  stat_boxplot(geom = "errorbar", coef = Inf, linewidth = 1, width = 0.5) +
+  scale_x_discrete(labels = c("playback at start" = "Playback at start", 
+                              "no playback at start" = "No playback at start")) +
+  scale_fill_manual(values = c("white", "grey90")) +
+  scale_y_continuous(labels = function(x) ifelse(x == 2, "2", x)) +
+  geom_point(position = position_jitterdodge(), alpha = 1, col = 'black', size = 2.5) +
+  labs(x = 'Treatment', y = 'Chirps / second') +
+  guides(fill = "none") +
+  shared_theme +
+  geom_text(data = sample_sizes_b, aes(x = treatment, y = y, label = label),
+            inherit.aes = FALSE, size = 7, parse = TRUE) +
+  annotate("text", x = -Inf, y = Inf, label = "b)", 
+           hjust = -0.3, vjust = 1.2, fontface = "bold", size = 10)
+
+# --- 4. Combine with patchwork ---
+final_plot_6 <- (p1 | p2) + 
+  plot_layout(widths = c(1, 1)) & 
+  theme(plot.margin = margin(20, 20, 20, 20))
+
+ggsave("fig_6_combined.tiff", plot = final_plot_6, width = 24, height = 8, units = "in", dpi = 300)
 
 
 ####################################################################################################################
@@ -408,7 +597,7 @@ df<-na.omit(df)
 df$treatment <- as.factor(df$treatment)
 
 
-#Figure 6a. plot for change in SPL with exposure
+#Figure 7a. plot for change in SPL with exposure
 df <- df %>%
   mutate(treatment = dplyr::recode(treatment, 
                             "0" = "control",
@@ -416,7 +605,7 @@ df <- df %>%
                             "5" = "5 min",
                             "10" = "10 min"))
 
-sample_sizes <- df %>%
+sample_sizes_a <- df %>%
 dplyr::count(treatment) %>%
 dplyr::mutate(
   n = n / 2,
@@ -425,6 +614,7 @@ dplyr::mutate(
 )
 pd <- position_dodge(width = 0.75)
 
+############################################## NO BOXES AROUND PLOT ##########################################################################################################################################################################
 
 my_plot <- df%>%
   ggplot(aes(x=treatment,y=spl, fill=factor(spl_time)))+
@@ -447,7 +637,7 @@ my_plot <- df%>%
   theme(axis.text=element_text(face='bold'),axis.title = element_text(face='bold'))
 my_plot <- my_plot +
   geom_text(
-    data = sample_sizes,
+    data = sample_sizes_a,
     aes(x = treatment, y = y, label = label),
     inherit.aes = FALSE,
     size = 7,
@@ -463,8 +653,85 @@ my_plot <- my_plot +
     size = 10
   )
 
-#saving Figure 6a
-p1 <- my_plot
+############################################ SPL PLOT WITH BOX AND TICK INSIDE THE PLOT #######################################################################################################################################################
+# --- 1. SHARED THEME (Frame + Inward Ticks) ---
+shared_theme <- theme_classic(base_size = 30) + 
+  theme(
+    # Create the full box
+    panel.border = element_rect(colour = "black", fill = NA, linewidth = 2),
+    axis.line = element_blank(), 
+    
+    axis.text = element_text(face = 'bold'),
+    axis.title = element_text(face = 'bold'),
+    plot.margin = margin(15, 15, 15, 15),
+    
+    # Move ticks inside
+    axis.ticks.length = unit(-0.3, "cm"), 
+    
+    # Add margin to text so labels don't hit the inward ticks
+    axis.text.x = element_text(margin = margin(t = 20), face = 'bold'),
+    axis.text.y = element_text(margin = margin(r = 20), face = 'bold'),
+    
+    # Tick lines match border thickness
+    axis.ticks = element_line(colour = "black", linewidth = 2),
+    
+    # Legend at the top for multi-panel consistency
+    legend.position = "top",
+    legend.title = element_blank(),
+    legend.text = element_text(face = "bold")
+  )
+
+# --- 2. FIGURE 7A PLOT ---
+# Ensure your factor levels for the legend are capitalized
+df$spl_time <- factor(df$spl_time, levels = c("before exposure", "post exposure"), 
+                      labels = c("Before exposure", "Post exposure"))
+
+pd <- position_dodge(width = 0.75)
+
+p1 <- df %>%
+  ggplot(aes(x = treatment, y = spl, fill = spl_time)) +
+  geom_boxplot(size = 1, coef = Inf, outlier.shape = NA, linewidth = 1) +
+  stat_boxplot(
+    geom = "errorbar",
+    coef = Inf,
+    linewidth = 2,
+    width = 0.5,
+    position = pd 
+  ) +
+  # Harmonized Legend
+  scale_fill_manual(
+    values = c("white", "grey70"),
+    name = "Time", 
+    labels = c("Before exposure", "Post exposure")
+  ) +
+  # Use position_jitterdodge to match the boxplot dodge width
+  geom_point(position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.75), 
+             alpha = 1, col = 'black', size = 2.5) +
+  
+  labs(x = '', y = 'SPL (dB)') +
+  scale_y_continuous(breaks = seq(54, 66, 4), limits = c(54, 68), 
+                     expand = expansion(mult = c(0, 0.02))) +
+  
+  shared_theme + # APPLYING THE SHARED THEME
+  
+  # Sample sizes at the bottom
+  geom_text(
+    data = sample_sizes_a,
+    aes(x = treatment, y = y, label = label),
+    inherit.aes = FALSE,
+    size = 7,
+    parse = TRUE
+  ) +
+  
+  # Panel label (a)
+  annotate(
+    "text",
+    x = -Inf, y = Inf,
+    label = "a)",
+    hjust = -0.3, vjust = 1.3,
+    fontface = "bold",
+    size = 10
+  )
 
 ##GLM SPL Table 1
 
@@ -475,7 +742,7 @@ anova(model1)
 Anova(model1,type = "III") 
 
 
-###########################################################################################################
+##############################################################################################################################################################################################################################
 
 ## Change in chirp_rate:analyses with plots
 
@@ -500,7 +767,7 @@ df <- df %>%
                             "5" = "5 min",
                             "10" = "10 min"))
 
-sample_sizes <- df %>%
+sample_sizes_b <- df %>%
 dplyr::count(treatment) %>%
 dplyr::mutate(
   n = n / 2,
@@ -509,10 +776,11 @@ dplyr::mutate(
 )
 pd <- position_dodge(width = 0.75)
 
+############################################## NO BOXES AROUND PLOT ##########################################################################################################################################################################
 
 my_plot <- df%>%
   ggplot(aes(x=treatment,y=chirp_rate, fill=factor(time_of_measurement)))+
-  geom_boxplot(size=1,coef = Inf, outlier.shape = NA,linewidth = 2) +
+  geom_boxplot(size=1,coef = Inf, outlier.shape = NA,linewidth = 1) +
   stat_boxplot(
     geom = "errorbar",
      coef = Inf,
@@ -521,7 +789,7 @@ my_plot <- df%>%
     position = pd 
   ) +
   scale_fill_manual(breaks = waiver(),values = c("white","grey70")) +
-  geom_point(position=position_jitterdodge(),alpha=1,col='black',size=4)+
+  geom_point(position=position_jitterdodge(),alpha=1,col='black',size=2.5)+
   labs(fill='') +
   scale_y_continuous(
     labels = function(x) ifelse(x == 2, "2", x)
@@ -533,7 +801,7 @@ my_plot <- df%>%
   theme(axis.text=element_text(face='bold'),axis.title = element_text(face='bold'))
 my_plot <- my_plot +
   geom_text(
-    data = sample_sizes,
+    data = sample_sizes_b,
     aes(x = treatment, y = y, label = label),
     inherit.aes = FALSE,
     size = 7,
@@ -549,9 +817,78 @@ my_plot <- my_plot +
     size = 10
   )
 
-#Saving Figure 6b
-p2 <- my_plot
+p2<-my_plot
+############################################### Chirp Rate  Plotting With Box and Tick Mark Inside ###############################################
+# --- 1. SHARED THEME (Frame + Inward Ticks) ---
+shared_theme <- theme_classic(base_size = 30) + 
+  theme(
+    # Create the full box
+    panel.border = element_rect(colour = "black", fill = NA, linewidth = 2),
+    axis.line = element_blank(), 
+    
+    axis.text = element_text(face = 'bold'),
+    axis.title = element_text(face = 'bold'),
+    plot.margin = margin(15, 15, 15, 15),
+    
+    # Move ticks inside
+    axis.ticks.length = unit(-0.3, "cm"), 
+    
+    # Add margin to text so labels don't hit the inward ticks
+    axis.text.x = element_text(margin = margin(t = 20), face = 'bold'),
+    axis.text.y = element_text(margin = margin(r = 20), face = 'bold'),
+    
+    # Tick lines match border thickness
+    axis.ticks = element_line(colour = "black", linewidth = 2),
+    
+    # Legend at the top for multi-panel consistency
+    legend.position = "none",
+    legend.title = element_blank(),
+    legend.text = element_text(face = "bold")
+  )
 
+p2 <- df %>%
+  ggplot(aes(x = treatment, y = chirp_rate, fill = time_of_measurement)) +
+  geom_boxplot(size = 1, coef = Inf, outlier.shape = NA, linewidth = 1) +
+  stat_boxplot(
+    geom = "errorbar",
+    coef = Inf,
+    linewidth = 2,
+    width = 0.5,
+    position = pd 
+  ) +
+  # Harmonized Legend
+  scale_fill_manual(
+    values = c("white", "grey70"),
+    name = "Time", 
+    labels = c("Before exposure", "Post exposure")
+  ) +
+  # Use jitterdodge to match boxplot centers
+  geom_point(position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.75), 
+             alpha = 1, col = 'black', size = 2.5) +
+  
+  scale_y_continuous(labels = function(x) ifelse(x == 2, "2", x)) +
+  labs(x = '', y = 'Chirps / second') +
+  
+  shared_theme + # APPLYING THE SHARED THEME
+  
+  # Sample sizes text
+  geom_text(
+    data = sample_sizes_b,
+    aes(x = treatment, y = y, label = label),
+    inherit.aes = FALSE,
+    size = 7,
+    parse = TRUE
+  ) +
+  
+  # Panel label (b)
+  annotate(
+    "text",
+    x = -Inf, y = Inf,
+    label = "b)",
+    hjust = -0.3, vjust = 1.3,
+    fontface = "bold",
+    size = 10
+  )
 
 
 #test for difference in chirp rates
@@ -598,7 +935,7 @@ confint(model)
 Anova(model,type = "III") 
 
 
-sample_sizes <- df_new %>%
+sample_sizes_c <- df_new %>%
 dplyr::count(treatment) %>%
 dplyr::mutate(
   n = n / 2,
@@ -607,6 +944,7 @@ dplyr::mutate(
 )
 pd <- position_dodge(width = 0.75)
 
+############################################## NO BOXES AROUND PLOT ##########################################################################################################################################################################
 
 my_plot <- df_new%>%
   ggplot(aes(x=treatment,y=call_effort, fill=factor(exposure_time)))+
@@ -631,7 +969,7 @@ guides(fill = guide_legend(override.aes = list(linewidth = 0.5,size=0.5))) +
   theme(axis.text=element_text(face='bold'),axis.title = element_text(face='bold'))
 my_plot <- my_plot +
   geom_text(
-    data = sample_sizes,
+    data = sample_sizes_c,
     aes(x = treatment, y = y, label = label),
     inherit.aes = FALSE,
     size = 7,
@@ -649,17 +987,88 @@ my_plot <- my_plot +
 #Saving Figure 6c
 p3 <-my_plot
 
-#ggsave("fig_6_c.jpg", plot = my_plot, width = 12, height = 8, units = "in", dpi = 300)
-final_plot <- p1 / p2 / p3 + plot_layout(heights = c(1,1,1))
+#########################################  Call effort Plots With Boxing ans Tick Inside ############################################################################
 
-ggsave("fig_6.jpg", plot = final_plot, width = 24, height = 16, units = "in", dpi = 300)
+# --- 1. SHARED THEME (Frame + Inward Ticks) ---
+# Ensure this is defined so all plots look identical
+shared_theme <- theme_classic(base_size = 30) + 
+  theme(
+    panel.border = element_rect(colour = "black", fill = NA, linewidth = 2),
+    axis.line = element_blank(), 
+    axis.text = element_text(face = 'bold'),
+    axis.title = element_text(face = 'bold'),
+    plot.margin = margin(15, 15, 15, 15),
+    
+    # Inward ticks logic
+    axis.ticks.length = unit(-0.3, "cm"), 
+    axis.text.x = element_text(margin = margin(t = 20), face = 'bold'),
+    axis.text.y = element_text(margin = margin(r = 20), face = 'bold'),
+    axis.ticks = element_line(colour = "black", linewidth = 2),
+    
+    # Legend at the top
+    legend.position = "none",
+    legend.title = element_blank(),
+    legend.text = element_text(face = "bold")
+  )
 
-##################################################################################################
+# --- 2. DATA PREPARATION ---
+# Capitalizing legend labels for consistency across all panels
+pd <- position_dodge(width = 0.75)
 
+# --- 3. FIGURE 7C PLOT ---
+p3 <- df_new %>%
+  ggplot(aes(x = treatment, y = call_effort, fill = exposure_time)) +
+  geom_boxplot(size = 1, coef = Inf, outlier.shape = NA, linewidth = 1) +
+  stat_boxplot(
+    geom = "errorbar",
+    coef = Inf,
+    linewidth = 2,
+    width = 0.5,
+    position = pd 
+  ) +
+  # Harmonized Legend
+  scale_fill_manual(
+    values = c("white", "grey70"),
+    name = "Time", 
+    labels = c("Before exposure", "Post exposure")
+  ) +
+  # Points sized 4 and dodged to match box centers
+  geom_point(position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.75), 
+             alpha = 1, col = 'black', size = 2.5) +
+  
+  # Clean y-axis labels for 0 and 1
+  scale_y_continuous(
+    labels = function(x) ifelse(x %in% c(0, 1), as.character(x), x)
+  ) +
+  
+  labs(x = 'Exposure duration (min)', y = 'Call effort') +
+  
+  shared_theme + # APPLYING THE SHARED THEME
+  
+  # Sample sizes text
+  geom_text(
+    data = sample_sizes_c,
+    aes(x = treatment, y = y, label = label),
+    inherit.aes = FALSE,
+    size = 7,
+    parse = TRUE
+  ) +
+  
+  # Panel label (c)
+  annotate(
+    "text",
+    x = -Inf, y = Inf,
+    label = "c)",
+    hjust = -0.3, vjust = 1.3,
+    fontface = "bold",
+    size = 10
+  )
 
+final_fig_7 <- (p1 / p2 / p3) + 
+  plot_layout(guides = 'collect') & 
+  theme(legend.position = 'top')
 
-
-
+ggsave("fig_7 combined.tiff", plot = final_fig_7, width = 24, height = 24, units = "in", dpi = 300)
 
 ######################################################################################################
                                   #Supplementary Ananlysis#
@@ -668,7 +1077,7 @@ ggsave("fig_6.jpg", plot = final_plot, width = 24, height = 16, units = "in", dp
 #Figure out the relevant dataset and then plot
 #Supplementary Figure 1
 dat <- read.csv('O.henryi_SPL_MovementtALL_DATA_T2.csv')
-#Subseeting control data
+#Subsetting control data
 SPL_control <- dat%>% filter (TREATMENT..min. == "0",MALE_SPL_PRE_EXPO.dB. !='NaN', MALE_SPL_POST_EXPO.dB. !='NaN')
 
 #shapiro test for the normality
@@ -722,8 +1131,64 @@ my_plot <- my_plot +
     size = 7,
     parse = TRUE 
   )
-ggsave("supplementary_fig_1.jpg", plot = my_plot, width = 12, height = 8, units = "in", dpi = 300)
-ß
+########################## Plot With Box and Tick mark inside#########################
+# --- 1. SHARED THEME (Frame + Inward Ticks) ---
+shared_theme <- theme_classic(base_size = 25) + 
+  theme(
+    # Create the full box
+    panel.border = element_rect(colour = "black", fill = NA, linewidth = 2),
+    axis.line = element_blank(), 
+    
+    axis.text = element_text(face = 'bold'),
+    axis.title = element_text(face = 'bold'),
+    plot.margin = margin(15, 15, 15, 15),
+    
+    # Move ticks inside
+    axis.ticks.length = unit(-0.3, "cm"), 
+    
+    # Add margin to text so labels don't hit the inward ticks
+    axis.text.x = element_text(margin = margin(t = 20), face = 'bold'),
+    axis.text.y = element_text(margin = margin(r = 20), face = 'bold'),
+    
+    # Tick lines match border thickness
+    axis.ticks = element_line(colour = "black", linewidth = 2)
+  )
+
+# --- 2. THE PLOT ---
+my_plot <- df_plot %>%
+  ggplot(aes(x = treatment, y = spl, fill = treatment)) +
+  geom_boxplot(size = 1, coef = Inf, outlier.shape = NA) +
+  stat_boxplot(
+    geom = "errorbar",
+    coef = Inf,
+    linewidth = 1,
+    width = 0.5
+  ) +
+  # Capitalizing and wrapping X-axis labels
+  scale_x_discrete(labels = c("playback at start" = "Playback at start", 
+                              "no playback at start" = "No playback at start")) +
+  scale_fill_manual(values = c("white", "grey90")) +
+  scale_y_continuous(labels = function(x) ifelse(x %% 1 == 0, as.character(x), x)) +
+  geom_point(position = position_jitterdodge(), alpha = 1, col = 'black', size = 2.5) +
+  
+  # Set xlab to Read Time of Measurement (min) 
+  labs(x = "Time of Measurement (min)", y = "SPL (dB)") + 
+  
+  guides(fill = "none") +
+  shared_theme + # APPLYING THE SHARED THEME
+  
+  # Sample sizes text
+  geom_text(
+    data = sample_sizes,
+    aes(x = treatment, y = y, label = label),
+    inherit.aes = FALSE,
+    size = 7,
+    parse = TRUE 
+  )
+
+
+ggsave("supplementary_fig_1.tiff", plot = my_plot, width = 12, height = 8, units = "in", dpi = 300)
+
 ############################################################################################ 
 #Supplementary Figure 4 with analysis
 
@@ -746,8 +1211,50 @@ my_plot <- df %>%
 ) +
   theme_classic(25) +
   theme(axis.text = element_text(face = 'bold'), axis.title = element_text(face = 'bold'))
+############################## body size and movement towards speaker + Box ################################
+# --- 1. SHARED THEME (Frame + Inward Ticks) ---
+shared_theme <- theme_classic(base_size = 25) + 
+  theme(
+    # Create the full box
+    panel.border = element_rect(colour = "black", fill = NA, linewidth = 2),
+    axis.line = element_blank(), 
+    
+    axis.text = element_text(face = 'bold'),
+    axis.title = element_text(face = 'bold'),
+    plot.margin = margin(15, 15, 15, 15),
+    
+    # Move ticks inside
+    axis.ticks.length = unit(-0.3, "cm"), 
+    
+    # Add margin to text so labels don't hit the inward ticks
+    axis.text.x = element_text(margin = margin(t = 20), face = 'bold'),
+    axis.text.y = element_text(margin = margin(r = 20), face = 'bold'),
+    
+    # Tick lines match border thickness
+    axis.ticks = element_line(colour = "black", linewidth = 2)
+  )
 
-ggsave("supplementary_fig_4.jpg", plot = my_plot, width = 12, height = 8, units = "in", dpi = 300)
+# --- 2. THE PLOT ---
+my_plot <- df %>%
+  ggplot(aes(x = Body.size.mm., y = Moved.Towards)) +
+  # Jittered points for binary data
+  geom_point(position = position_jitter(width = 0.1, height = 0.02), 
+             alpha = 1, col = 'black', size = 2.5) +
+  # Logistic regression curve
+  geom_smooth(method = "glm", 
+              method.args = list(family = "binomial"), 
+              se = FALSE, 
+              linetype = "dashed", 
+              color = 'black', 
+              linewidth = 2) +
+  # Labels
+  labs(x = 'Body size (mm)', y = 'Movement towards the speaker') +
+  # Ensure y-axis only highlights 0 and 1
+  scale_y_continuous(breaks = c(0, 0.5, 1),
+                     labels = function(x) ifelse(x %in% c(0, 1), as.character(x), x)) +
+  
+  shared_theme # APPLYING THE SHARED THEME
+ggsave("supplementary_fig_4.tiff", plot = my_plot, width = 12, height = 8, units = "in", dpi = 300)
 ############################################################################################
 
 #Supplementary Figure 5
@@ -807,8 +1314,55 @@ my_plot <- df_plot%>%
   ylab('proportion of movers') +
   theme_classic(25)+
   theme(axis.text=element_text(face='bold'),axis.title = element_text(face='bold')) 
+################################ BOX AND TICK ADDED ####################
+# --- 1. THE SHARED THEME (Box + Inward Ticks) ---
+shared_theme <- theme_classic(base_size = 25) + 
+  theme(
+    # Create the full box
+    panel.border = element_rect(colour = "black", fill = NA, linewidth = 2),
+    axis.line = element_blank(), 
+    
+    axis.text = element_text(face = 'bold'),
+    axis.title = element_text(face = 'bold'),
+    plot.margin = margin(15, 15, 15, 15),
+    
+    # Move ticks inside
+    axis.ticks.length = unit(-0.3, "cm"), 
+    
+    # Add margin to text so labels don't hit the inward ticks
+    axis.text.x = element_text(margin = margin(t = 20), face = 'bold'),
+    axis.text.y = element_text(margin = margin(r = 20), face = 'bold'),
+    
+    # Ensure tick lines match border thickness
+    axis.ticks = element_line(colour = "black", linewidth = 2)
+  )
 
-ggsave("supplementary_fig_5.jpg", plot = my_plot, width = 12, height = 8, units = "in", dpi = 300)
+# --- 2. THE PLOT ---
+my_plot <- df_plot %>%
+  ggplot(aes(x = treatment, y = mover_proportion, fill = treatment)) +
+  geom_bar(stat = "identity") + # No color = "black" for unboxed bars
+  geom_text(
+    aes(label = sprintf("%.2f", mover_proportion)),
+    vjust = 1.3,           # moves text inside bar
+    fontface = "bold",
+    color = "black",
+    size = 10
+  ) +
+  # Capitalizing and wrapping labels for a professional boxed look
+  scale_x_discrete(labels = c(
+    "playback at start"    = "Playback at start",
+    "no playback at start" = "No playback at start"
+  )) +
+  scale_fill_manual(values = c("grey75", "grey50")) +
+  scale_y_continuous(
+    limits = c(0, 1),
+    labels = function(x) ifelse(x == 0, "0", x)
+  ) +
+  labs(x = 'Treatment', y = 'Proportion of movers') +
+  guides(fill = "none") +
+  shared_theme # APPLYING THE SHARED THEME
+
+ggsave("supplementary_fig_5.tiff", plot = my_plot, width = 12, height = 8, units = "in", dpi = 300)
 
 ############################################################################################
 #Supplementary Figure 6
@@ -853,11 +1407,59 @@ my_plot <- fig_df%>%
   ylab('Call propensity') +
   theme_classic(25)+
   theme(axis.text=element_text(face='bold'),axis.title = element_text(face='bold')) 
+######################################### BOX and Ticks ####################################
 
-ggsave("supplementary_fig_6.jpg", plot = my_plot, width = 12, height = 8, units = "in", dpi = 300)
+# --- 1. THE SHARED THEME (Box + Inward Ticks) ---
+shared_theme <- theme_classic(base_size = 25) + 
+  theme(
+    # Create the full box enclosure
+    panel.border = element_rect(colour = "black", fill = NA, linewidth = 2),
+    axis.line = element_blank(), 
+    
+    axis.text = element_text(face = 'bold'),
+    axis.title = element_text(face = 'bold'),
+    plot.margin = margin(15, 15, 15, 15),
+    
+    # Move ticks inside (negative length pulls them into the plot)
+    axis.ticks.length = unit(-0.3, "cm"), 
+    
+    # Add margin to text so labels don't hit the inward ticks
+    axis.text.x = element_text(margin = margin(t = 20), face = 'bold'),
+    axis.text.y = element_text(margin = margin(r = 20), face = 'bold'),
+    
+    # Ensure tick lines match your border thickness
+    axis.ticks = element_line(colour = "black", linewidth = 2)
+  )
+
+# --- 2. THE PLOT ---
+my_plot <- fig_df %>%
+  ggplot(aes(x = treatment, y = proportion, fill = treatment)) +
+  geom_bar(stat = "identity") + # Keeps bars "unboxed" (no black outline)
+  geom_text(
+    aes(label = sprintf("%.2f", proportion)),
+    vjust = 1.3,           # moves text inside bar
+    fontface = "bold",
+    color = "black",
+    size = 10
+  ) +
+  # Capitalizing and wrapping labels for a professional boxed look
+  scale_x_discrete(labels = c(
+    "playback at start"    = "Playback at start",
+    "no playback at start" = "No playback at start"
+  )) +
+  scale_fill_manual(values = c("grey75", "grey50")) +
+  scale_y_continuous(
+    limits = c(0, 0.7),
+    labels = function(x) ifelse(x == 0, "0", x)
+  ) +
+  labs(x = 'Treatment', y = 'Call propensity') +
+  guides(fill = "none") +
+  shared_theme # APPLYING THE SHARED THEME
+
+ggsave("supplementary_fig_6.tiff", plot = my_plot, width = 12, height = 8, units = "in", dpi = 300)
 
 ############################################################################################
-$#Supplementary Figure 7
+#Supplementary Figure 7
 #Survivorship for males using the kaplan_meier method
 dat <- read.csv('Data_Surv_Analysis-1.csv',na.strings = c("NA",""))
 dat <- dat[!is.na(dat$Exp.ID), ]
@@ -867,6 +1469,32 @@ dat$Exp.ID  <- ifelse (dat$Exp.ID ==1, "Experiment 1", "Experiment 2")
 dat$Exp.ID <- as.factor(dat$Exp.ID)
 
 
+######################################## Boxed Plot ############################################
+# --- 1. THE SHARED THEME (Box + Inward Ticks) ---
+shared_theme <- theme_classic(base_size = 25) + 
+  theme(
+    # Create the full box enclosure
+    panel.border = element_rect(colour = "black", fill = NA, linewidth = 2),
+    axis.line = element_blank(), 
+    
+    axis.text = element_text(face = 'bold'),
+    axis.title = element_text(face = 'bold'),
+    plot.margin = margin(15, 15, 15, 15),
+    
+    # Move ticks inside (negative length pulls them into the plot)
+    axis.ticks.length = unit(-0.3, "cm"), 
+    
+    # Add margin to text so labels don't hit the inward ticks
+    axis.text.x = element_text(margin = margin(t = 20), face = 'bold'),
+    axis.text.y = element_text(margin = margin(r = 20), face = 'bold'),
+    
+    # Ensure tick lines match your border thickness
+    axis.ticks = element_line(colour = "black", linewidth = 2),
+    
+    # Legend formatting
+    legend.position = "top",
+    legend.text = element_text(face = "bold")
+  )
 
 my_plot <- survfit2(Surv(Latency, call_binary) ~ Exp.ID , data = dat) %>% 
   ggsurvfit(linetype_aes = TRUE,size=1) +
@@ -882,8 +1510,10 @@ my_plot <- survfit2(Surv(Latency, call_binary) ~ Exp.ID , data = dat) %>%
   add_confidence_interval() +
   add_legend_title('') +
   theme_classic(25) +
-  theme(axis.text=element_text(face='bold'),axis.title = element_text(face='bold'))  
-  ggsave("supplementary_fig_7.jpg", plot = my_plot, width = 12, height = 8, units = "in", dpi = 300)
+  theme(axis.text=element_text(face='bold'),axis.title = element_text(face='bold'))+
+  shared_theme
+
+ggsave("supplementary_fig_7.tiff", plot = my_plot, width = 12, height = 8, units = "in", dpi = 300)
 
 #testing for statistical differences between the survival curves
 survdiff(Surv(Latency, call_binary) ~ Exp.ID,
